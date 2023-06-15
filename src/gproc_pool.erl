@@ -55,6 +55,8 @@
 -module(gproc_pool).
 -behavior(gen_server).
 
+-include_lib("kernel/include/logger.hrl").
+
 %% gproc round-robin name lookup
 -export([new/1,                % (Pool) -> (Pool, round_robin, [])
          new/3,                % (Pool, Type, Opts)
@@ -768,12 +770,17 @@ find_names(Pool, Pid) ->
 
 add_worker_(Pool, Name) ->
     K = ?POOL(Pool),
+    ?LOG_NOTICE(#{pool => Pool, name => Name}),
     {Sz, Type} = gproc:get_value(K, shared),
+    ?LOG_NOTICE(#{sz => Sz, type => Type}),
     AutoSz = gproc:get_attribute(K, shared, auto_size),
+    ?LOG_NOTICE(#{auto_size => AutoSz}),
     Ws0 = get_workers_(K),
+    ?LOG_NOTICE(#{ws0 => Ws0}),
     {N,Ws1} =
         case lists:keymember(Name, 1, Ws0) of
             false ->
+                ?LOG_NOTICE(#{name => Name, k => K, ws0 => Ws0, type => Type, auto_size => AutoSz}),
                 case find_slot(Name, K, Ws0, Sz, Type, AutoSz) of
                     {_, _} = Res ->
                         Res;
@@ -784,11 +791,14 @@ add_worker_(Pool, Name) ->
                 error(exists)
         end,
     if N > Sz ->
+            ?LOG_NOTICE(#{k => K, n => N, ws1 => Ws1}),
             set_pool_size_(K, N, Ws1); % also calls set_workers/2
        true ->
             %% size not changed
+            ?LOG_NOTICE(#{k => K, ws1 => Ws1}),
             set_workers(K, Ws1)
     end,
+    ?LOG_NOTICE(#{pool => Pool, name => Name, n => N}),
     reg_worker(Pool, Name, N),
     N.
 
