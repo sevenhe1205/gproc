@@ -842,6 +842,7 @@ do_remove_worker_(Pool, Name) ->
     AutoSize = gproc:get_attribute(K, shared, auto_size),
     Ws0 = get_workers_(K),
     Ws1 = del_slot(Name, Ws0, AutoSize),
+    ?LOG_NOTICE(#{k => K, ws0 => Ws0, ws1 => Ws1, auto_size => AutoSize, name => Name}),
     gproc:unreg_shared(?POOL_WRK(Pool, Name)),
     case AutoSize of
         false -> ok;
@@ -850,6 +851,7 @@ do_remove_worker_(Pool, Name) ->
                 0 -> ok;
                 Diff when Diff < 0 ->
                     {_, Type} = gproc:get_value(K, shared),
+                    ?LOG_NOTICE(#{k => K, new_len => NewLen, type => Type}),
                     gproc:set_value_shared(K, {NewLen, Type})
             end
     end,
